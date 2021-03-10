@@ -148,7 +148,15 @@ def mergePR(String pullRequestLink, String credentialID = 'kie-ci') {
 
 // Optional: Pass in env.BUILD_TAG as buildTag in pipeline script 
 // to trace back the build from which this tag came from.
-def tagRepository(String tagName, String buildTag = '') {
+def tagRepository(String tagName, String buildTag = '', boolean override = false) {
+    if(override && isTagExist(tagName)) {
+        println "[INFO] Tag ${tagName} already exist. Deleting it."
+        sh """
+            git push --delete origin ${tagName}
+            git tag -d ${tagName}
+        """
+    }
+
     def currentCommit = getCommit()
     def tagMessageEnding = buildTag ? " in build \"${buildTag}\"." : '.'
     def tagMessage = "Tagged by Jenkins${tagMessageEnding}"
@@ -163,6 +171,11 @@ Tag: ${tagName}
 Tag Message: ${tagMessage}
 -------------------------------------------------------------
 """
+}
+
+boolean isTagExist(String tagName) {
+    sh 'git fetch --tags'
+    return sh(returnStatus: true, script: "git rev-parse ${tagName}") == 0
 }
 
 def pushObject(String remote, String object, String credentialsId = 'kie-ci') {
